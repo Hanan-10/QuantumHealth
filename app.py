@@ -186,11 +186,15 @@ if st.button("Run Quantum Prediction", type="primary"):
     )
 
     # Quantum prediction
-    quantum_result = int(
-        np.asarray(
-            vqc.predict(quantum_input)
-        ).ravel()[0]
-    )
+    quantum_prediction = np.asarray(vqc.predict(quantum_input))
+    if quantum_prediction.shape == (1, 2):
+        quantum_result = int(np.argmax(quantum_prediction, axis=1)[0])
+    elif quantum_prediction.shape == (1,):
+        quantum_result = int(quantum_prediction[0])
+    else:
+        raise ValueError(
+            f"Unexpected quantum prediction shape: {quantum_prediction.shape}"
+        )
 
     st.divider()
     st.header("Prediction Results")
