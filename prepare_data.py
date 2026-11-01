@@ -1,90 +1,83 @@
 
-import pandas as pd
-import numpy as np
 import os
+import pandas as pd
 import joblib
 
+from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import train_test_split
-from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 
-# 1. Download the dataset
-url = "https://raw.githubusercontent.com/jbrownlee/Datasets/master/pima-indians-diabetes.data.csv"
+# Create required folders
+os.makedirs("data/processed", exist_ok=True)
+os.makedirs("models", exist_ok=True)
 
-columns = [
-    "Pregnancies",
-    "Glucose",
-    "BloodPressure",
-    "SkinThickness",
-    "Insulin",
-    "BMI",
-    "DiabetesPedigreeFunction",
-    "Age",
-    "Outcome"
+# Load Breast Cancer Wisconsin dataset
+dataset = load_breast_cancer()
+
+X = pd.DataFrame(
+    dataset.data,
+    columns=dataset.feature_names
+)
+
+# Scikit-learn uses:
+# 0 = Malignant, 1 = Benign
+# We convert it to:
+# 0 = Benign, 1 = Malignant
+y = (dataset.target == 0).astype(int)
+
+# Select four features for quantum model
+selected_features = [
+    "mean radius",
+    "mean texture",
+    "mean perimeter",
+    "mean area"
 ]
 
-df = pd.read_csv(url, names=columns)
+X = X[selected_features]
 
-print("Dataset downloaded successfully!")
-print("Dataset shape:", df.shape)
+print("Dataset loaded successfully!")
+print("Dataset shape:", X.shape)
+print("Selected features:", selected_features)
 
-# 2. Select four features for our quantum model
-features = ["Glucose", "BMI", "Age", "BloodPressure"]
-
-X = df[features].copy()
-y = df["Outcome"]
-
-# 3. Replace invalid zero measurements with missing values
-invalid_columns = ["Glucose", "BMI", "BloodPressure"]
-
-X[invalid_columns] = X[invalid_columns].replace(0, np.nan)
-
-# 4. Split the data
+# Split dataset into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y,
+    X,
+    y,
     test_size=0.2,
     random_state=42,
     stratify=y
 )
 
-# 5. Handle missing values using training data only
-imputer = SimpleImputer(strategy="median")
-
-X_train = imputer.fit_transform(X_train)
-X_test = imputer.transform(X_test)
-# Save preprocessing objects
-os.makedirs("models", exist_ok=True)
-
-joblib.dump(imputer, "models/imputer.pkl")
-# 6. Normalize the features
+# Standardize features
 scaler = StandardScaler()
 
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
-joblib.dump(scaler, "models/standard_scaler.pkl")
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
 
-print("Preprocessing objects saved!")
+# Save processed data
+pd.DataFrame(
+    X_train_scaled,
+    columns=selected_features
+).to_csv("data/processed/X_train.csv", index=False)
 
-
-# 7. Save processed data
-os.makedirs("data/processed", exist_ok=True)
-
-pd.DataFrame(X_train, columns=features).to_csv(
-    "data/processed/X_train.csv", index=False
-)
-pd.DataFrame(X_test, columns=features).to_csv(
-    "data/processed/X_test.csv", index=False
-)
+pd.DataFrame(
+    X_test_scaled,
+    columns=selected_features
+).to_csv("data/processed/X_test.csv", index=False)
 
 pd.Series(y_train).to_csv(
     "data/processed/y_train.csv", index=False
 )
+
 pd.Series(y_test).to_csv(
     "data/processed/y_test.csv", index=False
 )
 
+# Save scaler
+joblib.dump(scaler, "models/standard_scaler.pkl")
+
 print("\nPreprocessing completed!")
 print("Training samples:", len(X_train))
 print("Testing samples:", len(X_test))
-print("Quantum features:", features)
-print("\nAll processed files saved successfully!")
+print("Benign = 0 | Malignant = 1")
+print("All processed files saved successfully!")

@@ -1,5 +1,6 @@
 
 import pandas as pd
+import joblib
 
 from sklearn.svm import SVC
 from sklearn.metrics import (
@@ -7,42 +8,51 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
     f1_score,
-    classification_report,
-    confusion_matrix
+    confusion_matrix,
+    classification_report
 )
 
-# Load processed data
+# Load processed dataset
 X_train = pd.read_csv("data/processed/X_train.csv")
 X_test = pd.read_csv("data/processed/X_test.csv")
 
 y_train = pd.read_csv("data/processed/y_train.csv").values.ravel()
 y_test = pd.read_csv("data/processed/y_test.csv").values.ravel()
 
-# Create SVM model
-model = SVC(kernel="rbf", random_state=42)
+# Create and train SVM model
+svm = SVC(kernel="rbf", random_state=42)
 
-# Train the model
-model.fit(X_train, y_train)
+print("Training Classical SVM model...")
+
+svm.fit(X_train, y_train)
 
 # Make predictions
-predictions = model.predict(X_test)
+y_pred = svm.predict(X_test)
 
-# Evaluate the model
-print("\n========== CLASSICAL SVM RESULTS ==========")
+# Evaluate model
+accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred, zero_division=0)
+recall = recall_score(y_test, y_pred, zero_division=0)
+f1 = f1_score(y_test, y_pred, zero_division=0)
 
-print("Accuracy:", round(accuracy_score(y_test, predictions), 4))
-print("Precision:", round(precision_score(y_test, predictions, zero_division=0), 4))
-print("Recall:", round(recall_score(y_test, predictions, zero_division=0), 4))
-print("F1 Score:", round(f1_score(y_test, predictions, zero_division=0), 4))
+print("\nCLASSICAL SVM RESULTS")
+print("---------------------")
+print(f"Accuracy:  {accuracy:.4f}")
+print(f"Precision: {precision:.4f}")
+print(f"Recall:    {recall:.4f}")
+print(f"F1 Score:  {f1:.4f}")
 
 print("\nConfusion Matrix:")
-print(confusion_matrix(y_test, predictions))
+print(confusion_matrix(y_test, y_pred))
 
 print("\nClassification Report:")
-print(classification_report(y_test, predictions))
+print(classification_report(
+    y_test,
+    y_pred,
+    target_names=["Benign", "Malignant"]
+))
 
-# Save model
-import joblib
-joblib.dump(model, "classical_svm.pkl")
+# Save trained model
+joblib.dump(svm, "models/classical_svm.pkl")
 
-print("\nClassical model saved successfully!")
+print("\nClassical SVM model saved successfully!")
